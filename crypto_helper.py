@@ -63,6 +63,14 @@ def decrypt_request_with_seed(encrypted_url, request_args, seed):
     
     return decrypted_url, decrypted_params
 
+def encrypt_complete_url(complete_url, seed):
+    """
+    Encrypt the complete URL string as-is without any parsing
+    This preserves multi-subscription URLs with encoded separators
+    """
+    crypto = SeedCrypto(seed)
+    return crypto.encrypt(complete_url)
+
 def encrypt_full_payload(url, query_string, seed):
     """
     Encrypt the full URL path and query string as a single payload
