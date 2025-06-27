@@ -127,7 +127,7 @@
       ]
     },
     {
-      "tag":"OpenAI",
+      "tag":"AI",
       "type":"selector",
       "outbounds":[
         "TaiWan",
@@ -424,7 +424,25 @@
         "action": "hijack-dns"
       },
       {
-        "rule_set": "geosite-category-ads-all",
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "rule_set": "geosite-category-ads-all"
+          },
+          {
+            "rule_set": "reject-domainset"
+          },
+          {
+            "rule_set": "reject-extra-domainset"
+          },
+          {
+            "rule_set": "reject-phishing-domainset"
+          },
+          {
+            "rule_set": "reject-ipset"
+          }
+        ],
         "clash_mode": "rule",
         "action": "reject"
       },
@@ -455,8 +473,8 @@
         "outbound": "direct"
       },
       {
-        "rule_set": "geosite-openai",
-        "outbound": "OpenAI"
+        "rule_set": "ai-non-ip",
+        "outbound": "AI"
       },
       {
         "rule_set": ["geosite-youtube", "geoip-google", "geosite-google", "geosite-github"],
@@ -532,10 +550,10 @@
         "download_detour": "direct"
       },
       {
-        "tag": "geosite-openai",
+        "tag": "ai-non-ip",
         "type": "remote",
-        "format": "binary",
-        "url": "https://testingcf.jsdelivr.net/gh/Toperlock/sing-box-geosite@main/rule/OpenAI.srs",
+        "format": "source",
+        "url": "https://ruleset.skk.moe/sing-box/non_ip/ai.json",
         "download_detour": "direct"
       },
       {
@@ -732,6 +750,34 @@
         "type": "remote",
         "format": "binary",
         "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cn.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "reject-domainset",
+        "type": "remote",
+        "format": "source",
+        "url": "https://ruleset.skk.moe/sing-box/domainset/reject.json",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "reject-extra-domainset",
+        "type": "remote",
+        "format": "source",
+        "url": "https://ruleset.skk.moe/sing-box/domainset/reject_extra.json",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "reject-phishing-domainset",
+        "type": "remote",
+        "format": "source",
+        "url": "https://ruleset.skk.moe/sing-box/domainset/reject_phishing.json",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "reject-ipset",
+        "type": "remote",
+        "format": "source",
+        "url": "https://ruleset.skk.moe/sing-box/ip/reject.json",
         "download_detour": "direct"
       }
     ]
