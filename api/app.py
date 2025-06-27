@@ -8,7 +8,7 @@ import tempfile
 import shutil
 import tempfile  # 导入 tempfile 模块
 from datetime import datetime, timedelta
-from crypto_helper import decrypt_request_with_seed, decrypt_full_payload, SERVER_SEED, encrypt_response
+from crypto_helper import decrypt_request_with_seed, decrypt_full_payload, decrypt_complete_url, SERVER_SEED, encrypt_response
 
 app = Flask(__name__, template_folder='../templates')  # 指定模板文件夹的路径
 app.secret_key = 'sing-box'  # 替换为实际的密钥
@@ -121,8 +121,8 @@ def dev_encrypted(encrypted):
     # Check if client wants encrypted response
     encrypt_response_flag = request.args.get('enc_resp', '0') == '1'
     
-    # Decrypt the entire payload
-    decrypted_url, decrypted_params = decrypt_full_payload(encrypted, seed)
+    # Decrypt the entire payload using the new decrypt_complete_url function
+    decrypted_url, decrypted_params = decrypt_complete_url(encrypted, seed)
     if not decrypted_url:
         error_response = json.dumps({'status': 'error', 'message': 'Decryption failed'}, indent=4, ensure_ascii=False)
         if encrypt_response_flag:

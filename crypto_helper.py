@@ -71,6 +71,30 @@ def encrypt_complete_url(complete_url, seed):
     crypto = SeedCrypto(seed)
     return crypto.encrypt(complete_url)
 
+def decrypt_complete_url(encrypted_url, seed):
+    """
+    Decrypt the complete URL string as-is without any parsing
+    This is the counterpart to encrypt_complete_url
+    """
+    crypto = SeedCrypto(seed)
+    decrypted = crypto.decrypt(encrypted_url)
+    if not decrypted:
+        return None, {}
+    
+    # Parse the decrypted URL into URL and parameters for server processing
+    if '?' in decrypted:
+        url, query_string = decrypted.split('?', 1)
+        # Parse query string into dict, but DON'T unquote values to preserve encoding
+        params = {}
+        if query_string:
+            for param in query_string.split('&'):
+                if '=' in param:
+                    key, value = param.split('=', 1)
+                    params[key] = value  # Keep original encoding
+        return url, params
+    else:
+        return decrypted, {}
+
 def encrypt_full_payload(url, query_string, seed):
     """
     Encrypt the full URL path and query string as a single payload
