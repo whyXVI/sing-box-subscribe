@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import tempfile  # 导入 tempfile 模块
 from datetime import datetime, timedelta
+from crypto_helper import decrypt_request_with_seed, decrypt_full_payload, SERVER_SEED, encrypt_response
 
 app = Flask(__name__, template_folder='../templates')  # 指定模板文件夹的路径
 app.secret_key = 'sing-box'  # 替换为实际的密钥
@@ -107,6 +108,46 @@ def edit_temp_json():
             flash(f'Error updating TEMP_JSON_DATA: note that the subscription link should not have a newline at the end, but should be inside double quotes ""')
             return jsonify({'status': 'error', 'message': str(e)})  # 返回错误状态和消息
 
+@app.route('/dev/<path:encrypted>', methods=['GET'])
+def dev_encrypted(encrypted):
+    """
+    Handle encrypted requests where the entire payload is encrypted
+    Format: /dev/<encrypted>
+    Uses server-side fixed seed, no seed parameter needed
+    """
+    # Use server-side fixed seed
+    seed = SERVER_SEED
+    
+    # Check if client wants encrypted response
+    encrypt_response_flag = request.args.get('enc_resp', '0') == '1'
+    
+    # Decrypt the entire payload
+    decrypted_url, decrypted_params = decrypt_full_payload(encrypted, seed)
+    if not decrypted_url:
+        error_response = json.dumps({'status': 'error', 'message': 'Decryption failed'}, indent=4, ensure_ascii=False)
+        if encrypt_response_flag:
+            error_response = encrypt_response(error_response)
+        return Response(error_response, content_type='application/json; charset=utf-8', status=400)
+    
+    # Now call the config function with decrypted data
+    # Override request.args with decrypted params
+    original_args = request.args
+    request.args = decrypted_params
+    
+    # Call the existing config function
+    try:
+        response = config(decrypted_url)
+        
+        # If client requested encrypted response, encrypt it
+        if encrypt_response_flag and response.status_code == 200:
+            encrypted_content = encrypt_response(response.get_data(as_text=True))
+            return Response(encrypted_content, content_type='text/plain; charset=utf-8')
+        
+        return response
+    finally:
+        # Restore original args
+        request.args = original_args
+
 @app.route('/config/<path:url>', methods=['GET'])
 def config(url):
     user_agent = request.headers.get('User-Agent') or ""
@@ -114,6 +155,25 @@ def config(url):
     if rua_values and any(rua_value in user_agent for rua_value in rua_values.split(',')):
         return Response(json.dumps({'status': 'error', 'message': 'block'}, indent=4, ensure_ascii=False),
                         content_type='application/json; charset=utf-8', status=403)
+    
+    # Check if this is an encrypted request
+    seed = request.args.get('seed')
+    if seed:
+        # Decrypt the URL and parameters
+        decrypted_url, decrypted_params = decrypt_request_with_seed(url, request.args, seed)
+        if decrypted_url:
+            # Replace url and request.args with decrypted values
+            url = decrypted_url
+            # Create a new args dict with decrypted values
+            new_args = {}
+            for key, value in decrypted_params.items():
+                new_args[key] = value
+            # Override request.args
+            request.args = new_args
+        else:
+            return Response(json.dumps({'status': 'error', 'message': 'Decryption failed'}, indent=4, ensure_ascii=False),
+                            content_type='application/json; charset=utf-8', status=400)
+    
     substrings = os.getenv('STR')
     if substrings and any(substring in url for substring in substrings.split(',')):
         return Response(json.dumps({'status': 'error', 'message_CN': '填写参数不符合规范'}, indent=4, ensure_ascii=False),
