@@ -129,14 +129,21 @@ def dev_encrypted(encrypted):
             error_response = encrypt_response(error_response)
         return Response(error_response, content_type='application/json; charset=utf-8', status=400)
     
-    # Now call the config function with decrypted data
-    # Override request.args with decrypted params
-    original_args = request.args
-    request.args = decrypted_params
+    # Build query string from decrypted params
+    query_parts = []
+    for key, value in decrypted_params.items():
+        query_parts.append(f"{key}={value}")
+    reconstructed_query_string = "&".join(query_parts)
     
-    # Call the existing config function
+    # Reconstruct the full URL with parameters
+    if reconstructed_query_string:
+        full_decrypted_url = f"{decrypted_url}?{reconstructed_query_string}"
+    else:
+        full_decrypted_url = decrypted_url
+        
+    # Now call the config function with the reconstructed URL
     try:
-        response = config(decrypted_url)
+        response = config(full_decrypted_url)
         
         # If client requested encrypted response, encrypt it
         if encrypt_response_flag and response.status_code == 200:
@@ -144,9 +151,11 @@ def dev_encrypted(encrypted):
             return Response(encrypted_content, content_type='text/plain; charset=utf-8')
         
         return response
-    finally:
-        # Restore original args
-        request.args = original_args
+    except Exception as e:
+        error_response = json.dumps({'status': 'error', 'message': str(e)}, indent=4, ensure_ascii=False)
+        if encrypt_response_flag:
+            error_response = encrypt_response(error_response)
+        return Response(error_response, content_type='application/json; charset=utf-8', status=500)
 
 @app.route('/config/<path:url>', methods=['GET'])
 def config(url):
