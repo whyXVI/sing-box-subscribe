@@ -81,7 +81,12 @@ def decrypt_complete_url(encrypted_url, seed):
     if not decrypted:
         return None, {}
     
-    # Parse the decrypted URL into URL and parameters for server processing
+    # Check if this is a multi-subscription URL (contains | separator)
+    if '|' in decrypted:
+        # For multi-subscription URLs, return the complete string without parsing
+        return decrypted, {}
+    
+    # Parse the decrypted URL into URL and parameters for single subscription
     if '?' in decrypted:
         url, query_string = decrypted.split('?', 1)
         # Parse query string into dict, but DON'T unquote values to preserve encoding
