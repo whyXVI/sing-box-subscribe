@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import tempfile  # 导入 tempfile 模块
 from datetime import datetime, timedelta
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from crypto_helper import decrypt_request_with_seed, decrypt_full_payload, decrypt_complete_url, SERVER_SEED, encrypt_response
 
 app = Flask(__name__, template_folder='../templates')  # 指定模板文件夹的路径
