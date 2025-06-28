@@ -288,15 +288,50 @@ def config(url):
         full_url = full_url
     else:
         full_url = unquote(full_url)
+    
+    # 检查是否包含编码的多订阅分隔符，如果包含则进一步解码
+    if '%7C' in full_url or '%7c' in full_url:
+        full_url = unquote(full_url)
+    
     if '/api/v4/projects/' in full_url:
         parts = full_url.split('/api/v4/projects/')
         full_url = parts[0] + '/api/v4/projects/' + parts[1].replace('/', '%2F', 1)
     print (full_url)
-    url_parts = full_url.split('|')
+    
+    # 特殊处理：检查是否是包含多订阅的rule参数格式
+    url_parts = []
+    if '?' in full_url and 'rule=' in full_url:
+        base_url, query_string = full_url.split('?', 1)
+        params = {}
+        for param in query_string.split('&'):
+            if '=' in param:
+                key, value = param.split('=', 1)
+                params[key] = value
+        
+        # 检查rule参数是否包含多订阅分隔符
+        if 'rule' in params and '|' in params['rule']:
+            rule_value = params['rule']
+            if rule_value.startswith('default|'):
+                # 提取第一个订阅（重构参数）
+                params['rule'] = 'default'
+                first_url_params = '&'.join([f'{k}={v}' for k, v in params.items() if k != 'rule']) + '&rule=default'
+                first_subscription = f'{base_url}?{first_url_params}'
+                
+                # 提取第二个订阅
+                second_subscription = rule_value[8:]  # 移除'default|'
+                
+                url_parts = [first_subscription, second_subscription]
+            else:
+                url_parts = full_url.split('|')
+        else:
+            url_parts = full_url.split('|')
+    else:
+        url_parts = full_url.split('|')
+    
     if len(url_parts) > 1:
-        subscribe['url'] = full_url.split('url=', 1)[-1].split('|')[0] if full_url.startswith('url') else full_url.split('|')[0]
+        subscribe['url'] = url_parts[0]
         subscribe['ex-node-name'] = enn_param
-        subscribe2['url'] = full_url.split('url=', 1)[-1].split('|')[1] if full_url.startswith('url') else full_url.split('|')[1]
+        subscribe2['url'] = url_parts[1]
         subscribe2['emoji'] = 1
         subscribe2['enabled'] = True
         subscribe2['subgroup'] = ''
@@ -304,7 +339,7 @@ def config(url):
         subscribe2['ex-node-name'] = enn_param
         subscribe2['User-Agent'] = 'v2rayng'
         if len(url_parts) == 3:
-            subscribe3['url'] = full_url.split('url=', 1)[-1].split('|')[2] if full_url.startswith('url') else full_url.split('|')[2]
+            subscribe3['url'] = url_parts[2]
             subscribe3['enabled'] = True
             subscribe3['ex-node-name'] = enn_param
     if len(url_parts) == 1:
